@@ -20,20 +20,12 @@
     width: 600px; 
     height: 600px; 
     flex-shrink: 0;
+    /* Optional: Add a subtle border to frame the chart area */
+    border: 1px solid #f0f0f0; 
+    border-radius: 8px;
   }
   
   svg { width: 100%; height: 100%; overflow: visible; }
-  .grid-line { fill: none; stroke: #e0e0e0; stroke-width: 1; }
-  .axis-line { stroke: #ccc; stroke-width: 1; stroke-dasharray: 4; }
-  .label-text { font-size: 12px; font-weight: bold; text-anchor: middle; alignment-baseline: middle; }
-  
-  /* The User's Data Shape */
-  #data-polygon {
-    fill: rgba(33, 150, 243, 0.4);
-    stroke: #2196f3;
-    stroke-width: 2;
-    transition: all 0.3s ease;
-  }
 
   /* Right Side: The Inputs */
   .controls {
@@ -74,7 +66,33 @@
     text-align: center;
   }
 
-  /* Color Themes */
+  /* Download Button Styles */
+  .btn-container {
+    grid-column: span 2;
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+  }
+
+  .btn-download {
+    background-color: #333;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-download:hover {
+    background-color: #555;
+  }
+
+  /* Color Themes for Inputs */
   .theme-pink { background: #fff0f0; border-left: 4px solid #d65c5c; }
   .theme-orange { background: #fff5eb; border-left: 4px solid #e69c68; }
   .theme-yellow { background: #ffffe0; border-left: 4px solid #cccc33; }
@@ -82,15 +100,19 @@
   .theme-blue { background: #f0f8ff; border-left: 4px solid #2196f3; }
   .theme-purple { background: #f8f0ff; border-left: 4px solid #9c27b0; }
 
-  /* Title */
-  h1 { width: 100%; text-align: center; margin-bottom: 30px; }
-
 </style>
 </head>
 <body>
 
-<div class="chart-container">
-  <svg viewBox="0 0 600 600">
+<div class="chart-container" id="capture-area">
+  <svg viewBox="0 0 600 600" id="main-svg">
+    <style>
+      .grid-line { fill: none; stroke: #e0e0e0; stroke-width: 1; }
+      .axis-line { stroke: #ccc; stroke-width: 1; stroke-dasharray: 4; }
+      .label-text { font-family: 'Segoe UI', sans-serif; font-size: 12px; font-weight: bold; text-anchor: middle; alignment-baseline: middle; }
+      #data-polygon { fill: rgba(33, 150, 243, 0.4); stroke: #2196f3; stroke-width: 2; }
+    </style>
+
     <g id="grid"></g>
     <polygon id="data-polygon" points=""></polygon>
     <g id="labels"></g>
@@ -103,43 +125,16 @@
 <script>
   // Configuration
   const groups = [
-    { 
-      name: "Physical", 
-      class: "theme-pink",
-      stats: ["Health", "Strength", "Stamina"] 
-    },
-    { 
-      name: "Technical",  // CHANGED FROM APPEARANCE
-      class: "theme-orange",
-      stats: ["Engineering", "Crafting", "Tech"] // NEW STATS
-    },
-    { 
-      name: "Personality", 
-      class: "theme-green",
-      stats: ["Humor", "Passion", "Empathy"] 
-    },
-    { 
-      name: "Metaphysical", 
-      class: "theme-purple",
-      stats: ["Spirituality", "Discipline", "Luck"] 
-    },
-    { 
-      name: "Social", 
-      class: "theme-blue",
-      stats: ["Charisma", "Social Skills", "Confidence"] 
-    },
-    { 
-      name: "Mental", 
-      class: "theme-yellow",
-      stats: ["Intelligence", "Perception", "Creativity"] 
-    }
+    { name: "Physical", class: "theme-pink", stats: ["Health", "Strength", "Stamina"] },
+    { name: "Technical", class: "theme-orange", stats: ["Engineering", "Crafting", "Tech"] },
+    { name: "Personality", class: "theme-green", stats: ["Humor", "Passion", "Empathy"] },
+    { name: "Metaphysical", class: "theme-purple", stats: ["Spirituality", "Discipline", "Luck"] },
+    { name: "Social", class: "theme-blue", stats: ["Charisma", "Social Skills", "Confidence"] },
+    { name: "Mental", class: "theme-yellow", stats: ["Intelligence", "Perception", "Creativity"] }
   ];
 
-  // Flatten for easy access
   let allStats = [];
-  groups.forEach(g => {
-    g.stats.forEach(s => allStats.push(s));
-  });
+  groups.forEach(g => g.stats.forEach(s => allStats.push(s)));
 
   const svgGrid = document.getElementById('grid');
   const svgLabels = document.getElementById('labels');
@@ -150,16 +145,15 @@
   const centerY = 300;
   const radius = 200;
   const angleStep = (Math.PI * 2) / allStats.length;
-
-  // Initialize Data (Default to 5 for all)
   const userValues = {};
+
+  // Initialize Data
   allStats.forEach(stat => userValues[stat] = 5);
 
   // --- 1. BUILD THE UI (Inputs) ---
   groups.forEach(group => {
     const div = document.createElement('div');
     div.className = `control-group ${group.class}`;
-    
     const title = document.createElement('div');
     title.className = 'group-title';
     title.innerText = group.name;
@@ -168,18 +162,15 @@
     group.stats.forEach(stat => {
       const row = document.createElement('div');
       row.className = 'input-row';
-      
       const label = document.createElement('label');
       label.innerText = stat;
-      
       const input = document.createElement('input');
       input.type = 'number';
-      input.min = 0;
+      input.min = 0; 
       input.max = 10;
-      input.value = 5; // Start at middle
+      input.value = 5;
       input.dataset.stat = stat;
       
-      // Update Graph on Input Change
       input.addEventListener('input', (e) => {
         let val = parseFloat(e.target.value);
         if (isNaN(val)) val = 0;
@@ -193,11 +184,20 @@
       row.appendChild(input);
       div.appendChild(row);
     });
-    
     inputContainer.appendChild(div);
   });
 
-  // --- 2. BUILD THE CHART (Grid & Labels) ---
+  // Add Download Button
+  const btnContainer = document.createElement('div');
+  btnContainer.className = 'btn-container';
+  const dlBtn = document.createElement('button');
+  dlBtn.className = 'btn-download';
+  dlBtn.innerHTML = '📷 Save Image';
+  dlBtn.onclick = downloadChart;
+  btnContainer.appendChild(dlBtn);
+  inputContainer.appendChild(btnContainer);
+
+  // --- 2. BUILD THE CHART ---
   const levels = 5; 
   for (let i = 1; i <= levels; i++) {
     const currentRadius = (radius / levels) * i;
@@ -216,8 +216,6 @@
 
   allStats.forEach((stat, index) => {
     const angle = index * angleStep - (Math.PI / 2);
-    
-    // Axis Line
     const lineX = centerX + radius * Math.cos(angle);
     const lineY = centerY + radius * Math.sin(angle);
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
@@ -228,7 +226,6 @@
     line.setAttribute("class", "axis-line");
     svgGrid.appendChild(line);
 
-    // Label
     const labelRadius = radius + 25; 
     const labelX = centerX + labelRadius * Math.cos(angle);
     const labelY = centerY + labelRadius * Math.sin(angle);
@@ -240,19 +237,62 @@
     svgLabels.appendChild(text);
   });
 
-  // --- 3. DRAW THE DATA POLYGON ---
+  // --- 3. DRAW DATA ---
   function drawGraph() {
     let points = "";
     allStats.forEach((stat, index) => {
       const val = userValues[stat];
       const angle = index * angleStep - (Math.PI / 2);
-      // Map 0-10 to Radius
       const r = (val / 10) * radius;
       const x = centerX + r * Math.cos(angle);
       const y = centerY + r * Math.sin(angle);
       points += `${x},${y} `;
     });
     dataPolygon.setAttribute("points", points);
+  }
+
+  // --- 4. DOWNLOAD FUNCTION ---
+  function downloadChart() {
+    const svgElement = document.getElementById('main-svg');
+    const serializer = new XMLSerializer();
+    let source = serializer.serializeToString(svgElement);
+
+    // Add XML namespaces
+    if(!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
+        source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+    if(!source.match(/^<svg[^>]+xmlns:xlink="http\:\/\/www\.w3\.org\/1999\/xlink"/)){
+        source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+    }
+
+    // Add XML declaration
+    source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+
+    // Convert SVG source to URI data scheme.
+    const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
+
+    // Create Image and Draw to Canvas
+    const img = new Image();
+    img.onload = function() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 800; // High res
+        canvas.height = 800;
+        const context = canvas.getContext('2d');
+        
+        // Fill white background (otherwise it's transparent)
+        context.fillStyle = "#FFFFFF";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw image
+        context.drawImage(img, 0, 0, 800, 800);
+        
+        // Download
+        const a = document.createElement('a');
+        a.download = "my-stat-chart.png";
+        a.href = canvas.toDataURL("image/png");
+        a.click();
+    };
+    img.src = url;
   }
 
   // Initial Draw
