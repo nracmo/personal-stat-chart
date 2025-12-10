@@ -36,6 +36,7 @@
   .theme-blue { background: #f0f8ff; border-left: 4px solid #2196f3; }
   .theme-yellow { background: #ffffe0; border-left: 4px solid #cccc33; }
 
+  /* On-screen styles */
   .grid-line { fill: none; stroke: #e0e0e0; stroke-width: 1; }
   .axis-line { stroke: #ccc; stroke-width: 1; stroke-dasharray: 4; }
   .label-text { font-size: 12px; font-weight: bold; text-anchor: middle; alignment-baseline: middle; fill: #333; }
@@ -47,7 +48,7 @@
 </head>
 <body>
 
-<div id="loading">Generating 3D Geometry...</div>
+<div id="loading">Generating Watertight Mesh...</div>
 
 <div class="chart-container">
   <svg viewBox="0 0 600 600" id="main-svg">
@@ -81,7 +82,6 @@
     { name: "Mental", class: "theme-yellow", stats: ["Intelligence", "Perception", "Creativity"] }
   ];
 
-  // Abbreviation Map (Only for STL)
   const abbrMap = {
     "Health": "HP", "Strength": "STR", "Stamina": "STA",
     "Engineering": "ENG", "Crafting": "CRA", "Tech": "TEC",
@@ -131,7 +131,7 @@
     });
   });
 
-  // --- DRAWING LOGIC (Screen Only) ---
+  // --- DRAWING LOGIC ---
   const svgGrid = document.getElementById('grid');
   const svgLabels = document.getElementById('labels');
   const dataPolygon = document.getElementById('data-polygon');
@@ -156,8 +156,7 @@
       const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
       text.setAttribute("x", lx); text.setAttribute("y", ly);
       text.setAttribute("class", "label-text");
-      // Use FULL NAME for screen display
-      text.textContent = stat;
+      text.textContent = stat; // Full name for screen
       svgLabels.appendChild(text);
       
       const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
@@ -183,10 +182,20 @@
   initChart();
   drawGraph();
 
+  // --- FIXED IMAGE EXPORT ---
   function downloadImage() {
     const svg = document.getElementById('main-svg');
+    const clone = svg.cloneNode(true);
+    const style = document.createElementNS("http://www.w3.org/2000/svg", "style");
+    style.textContent = `
+      .grid-line { fill: none; stroke: #e0e0e0; stroke-width: 1; }
+      .axis-line { stroke: #ccc; stroke-width: 1; stroke-dasharray: 4; }
+      .label-text { font-family: 'Segoe UI', sans-serif; font-size: 12px; font-weight: bold; text-anchor: middle; alignment-baseline: middle; fill: #333; }
+      #data-polygon { fill: rgba(33, 150, 243, 0.4); stroke: #2196f3; stroke-width: 2; }
+    `;
+    clone.prepend(style);
     const serializer = new XMLSerializer();
-    let source = serializer.serializeToString(svg);
+    let source = serializer.serializeToString(clone);
     source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
     const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
     const img = new Image();
@@ -204,7 +213,7 @@
     img.src = url;
   }
 
-  // --- STL GENERATOR ---
+  // --- WATERTIGHT STL GENERATOR ---
   function startSTL() {
     document.getElementById('loading').style.display = 'flex';
     setTimeout(generateSTL, 50); 
@@ -212,9 +221,8 @@
 
   function generateSTL() {
     const diameterInput = parseFloat(document.getElementById('cfg-diameter').value) || 50.8;
-    
-    // Proportions
     const R_OUTER = diameterInput / 2;
+    // Calculate precise transitions
     const R_LABEL_RING_START = R_OUTER * 0.72; 
     const R_MAX_DATA = R_OUTER * 0.68;
     
@@ -223,6 +231,7 @@
     const H_LABEL_RING = 2.8; 
     const H_TEXT = 3.6; 
     const H_DATA = 4.0;
+    const H_DATA_BOTTOM = 1.5; // Embeds graph slightly into base (fixes floating/coplanar issues)
     
     let stl = "solid StatCoin\n";
     
@@ -236,44 +245,56 @@
       triangle(bl, br, tr); triangle(bl, tr, tl);
     };
     const cube = (x, y, z, w, h) => {
-        // Top
-        quad({x:x,y:y,z:z+h}, {x:x+w,y:y,z:z+h}, {x:x+w,y:y+w,z:z+h}, {x:x,y:y+w,z:z+h});
-        // Sides
-        quad({x:x,y:y,z:z}, {x:x+w,y:y,z:z}, {x:x+w,y:y,z:z+h}, {x:x,y:y,z:z+h});
-        quad({x:x+w,y:y,z:z}, {x:x+w,y:y+w,z:z}, {x:x+w,y:y+w,z:z+h}, {x:x+w,y:y,z:z+h});
-        quad({x:x+w,y:y+w,z:z}, {x:x,y:y+w,z:z}, {x:x,y:y+w,z:z+h}, {x:x+w,y:y+w,z:z+h});
-        quad({x:x,y:y+w,z:z}, {x:x,y:y,z:z}, {x:x,y:y,z:z+h}, {x:x,y:y+w,z:z+h});
+        quad({x:x,y:y,z:z+h}, {x:x+w,y:y,z:z+h}, {x:x+w,y:y+w,z:z+h}, {x:x,y:y+w,z:z+h}); // Top
+        quad({x:x,y:y,z:z}, {x:x+w,y:y,z:z}, {x:x+w,y:y,z:z+h}, {x:x,y:y,z:z+h}); // Front
+        quad({x:x+w,y:y,z:z}, {x:x+w,y:y+w,z:z}, {x:x+w,y:y+w,z:z+h}, {x:x+w,y:y,z:z+h}); // Right
+        quad({x:x+w,y:y+w,z:z}, {x:x,y:y+w,z:z}, {x:x,y:y+w,z:z+h}, {x:x+w,y:y+w,z:z+h}); // Back
+        quad({x:x,y:y+w,z:z}, {x:x,y:y,z:z}, {x:x,y:y,z:z+h}, {x:x,y:y+w,z:z+h}); // Left
     }
 
     const segments = 60; 
 
-    // 1. Base Disc
+    // 1. UNIFIED COIN BODY (Base Disc + Label Ring)
+    // This loops generates the base and ring simultaneously to share vertices at R_LABEL_RING_START
+    // This fixes the "orange vertex" watertight issues.
     for (let i = 0; i < segments; i++) {
       const a1 = (i / segments) * Math.PI * 2;
       const a2 = ((i + 1) / segments) * Math.PI * 2;
-      const p1 = { x: Math.cos(a1) * R_OUTER, y: Math.sin(a1) * R_OUTER };
-      const p2 = { x: Math.cos(a2) * R_OUTER, y: Math.sin(a2) * R_OUTER };
-      
-      triangle({x:0,y:0,z:0}, {x:p2.x,y:p2.y,z:0}, {x:p1.x,y:p1.y,z:0}); 
-      triangle({x:0,y:0,z:H_BASE}, {x:p1.x,y:p1.y,z:H_BASE}, {x:p2.x,y:p2.y,z:H_BASE});
-      quad({x:p1.x,y:p1.y,z:0}, {x:p2.x,y:p2.y,z:0}, {x:p2.x,y:p2.y,z:H_BASE}, {x:p1.x,y:p1.y,z:H_BASE});
-    }
 
-    // 2. Label Ring
-    for (let i = 0; i < segments; i++) {
-      const a1 = (i / segments) * Math.PI * 2;
-      const a2 = ((i + 1) / segments) * Math.PI * 2;
-      const i1 = { x: Math.cos(a1) * R_LABEL_RING_START, y: Math.sin(a1) * R_LABEL_RING_START };
-      const i2 = { x: Math.cos(a2) * R_LABEL_RING_START, y: Math.sin(a2) * R_LABEL_RING_START };
+      // Coordinates for Inner Boundary (Center)
+      const c = {x:0, y:0};
+
+      // Coordinates for Middle Boundary (Start of Ring)
+      const m1 = { x: Math.cos(a1) * R_LABEL_RING_START, y: Math.sin(a1) * R_LABEL_RING_START };
+      const m2 = { x: Math.cos(a2) * R_LABEL_RING_START, y: Math.sin(a2) * R_LABEL_RING_START };
+
+      // Coordinates for Outer Boundary (End of Ring)
       const o1 = { x: Math.cos(a1) * R_OUTER, y: Math.sin(a1) * R_OUTER };
       const o2 = { x: Math.cos(a2) * R_OUTER, y: Math.sin(a2) * R_OUTER };
 
-      quad({x:i1.x, y:i1.y, z:H_LABEL_RING}, {x:o1.x, y:o1.y, z:H_LABEL_RING}, {x:o2.x, y:o2.y, z:H_LABEL_RING}, {x:i2.x, y:i2.y, z:H_LABEL_RING});
-      quad({x:i1.x, y:i1.y, z:H_BASE}, {x:i2.x, y:i2.y, z:H_BASE}, {x:i2.x, y:i2.y, z:H_LABEL_RING}, {x:i1.x, y:i1.y, z:H_LABEL_RING});
-      quad({x:o1.x, y:o1.y, z:H_BASE}, {x:o2.x, y:o2.y, z:H_BASE}, {x:o2.x, y:o2.y, z:H_LABEL_RING}, {x:o1.x, y:o1.y, z:H_LABEL_RING});
+      // A. Inner Floor (The flat area where the graph lives) - Triangle Fan
+      triangle({x:c.x,y:c.y,z:H_BASE}, {x:m1.x,y:m1.y,z:H_BASE}, {x:m2.x,y:m2.y,z:H_BASE});
+
+      // B. Ring Body (The raised outer rim)
+      // Top Surface of Ring
+      quad({x:m1.x,y:m1.y,z:H_LABEL_RING}, {x:o1.x,y:o1.y,z:H_LABEL_RING}, {x:o2.x,y:o2.y,z:H_LABEL_RING}, {x:m2.x,y:m2.y,z:H_LABEL_RING});
+      
+      // Inner Wall of Ring (Connecting Inner Floor to Ring Top) - CRITICAL TRANSITION
+      quad({x:m1.x,y:m1.y,z:H_BASE}, {x:m2.x,y:m2.y,z:H_BASE}, {x:m2.x,y:m2.y,z:H_LABEL_RING}, {x:m1.x,y:m1.y,z:H_LABEL_RING});
+
+      // Outer Wall of Ring
+      quad({x:o1.x,y:o1.y,z:H_BASE}, {x:o2.x,y:o2.y,z:H_BASE}, {x:o2.x,y:o2.y,z:H_LABEL_RING}, {x:o1.x,y:o1.y,z:H_LABEL_RING});
+      
+      // Outer Rim Vertical (Base thickness)
+      quad({x:o1.x,y:o1.y,z:0}, {x:o2.x,y:o2.y,z:0}, {x:o2.x,y:o2.y,z:H_BASE}, {x:o1.x,y:o1.y,z:H_BASE});
+
+      // Bottom Cap (Full disk at Z=0)
+      triangle({x:c.x,y:c.y,z:0}, {x:o2.x,y:o2.y,z:0}, {x:o1.x,y:o1.y,z:0});
     }
 
-    // 3. Stat Polygon
+    // 2. STAT POLYGON (Graph)
+    // Uses negative Cosine to fix mirroring.
+    // Starts at H_DATA_BOTTOM (1.5) instead of H_BASE (2.0) to intersect the floor solidly.
     for (let i = 0; i < allStats.length; i++) {
       const sC = allStats[i];
       const sN = allStats[(i + 1) % allStats.length];
@@ -281,55 +302,55 @@
       const r2 = (userValues[sN] / 10) * R_MAX_DATA;
       const a1 = i * angleStep - (Math.PI / 2);
       const a2 = ((i + 1) % allStats.length) * angleStep - (Math.PI / 2);
-      const p1 = { x: Math.cos(a1) * r1, y: Math.sin(a1) * r1 };
-      const p2 = { x: Math.cos(a2) * r2, y: Math.sin(a2) * r2 };
       
+      // Mirror fix applied here (-Math.cos)
+      const p1 = { x: -Math.cos(a1) * r1, y: Math.sin(a1) * r1 };
+      const p2 = { x: -Math.cos(a2) * r2, y: Math.sin(a2) * r2 };
+      
+      // Top Surface
       triangle({x:0,y:0,z:H_DATA}, {x:p1.x,y:p1.y,z:H_DATA}, {x:p2.x,y:p2.y,z:H_DATA});
-      quad({x:p1.x, y:p1.y, z:H_BASE}, {x:p2.x, y:p2.y, z:H_BASE}, {x:p2.x, y:p2.y, z:H_DATA}, {x:p1.x, y:p1.y, z:H_DATA});
+      
+      // Side Walls
+      // Note: We use H_DATA_BOTTOM here to push the graph into the floor
+      quad({x:p1.x, y:p1.y, z:H_DATA_BOTTOM}, {x:p2.x, y:p2.y, z:H_DATA_BOTTOM}, {x:p2.x, y:p2.y, z:H_DATA}, {x:p1.x, y:p1.y, z:H_DATA});
+      
+      // We don't need a bottom cap for the graph because it's buried inside the base coin.
     }
 
-    // 4. PIXEL TEXT GENERATOR
+    // 3. PIXEL TEXT GENERATOR
     const txtCanvas = document.createElement('canvas');
     const dim = 600; 
     txtCanvas.width = dim; txtCanvas.height = dim;
     const ctx = txtCanvas.getContext('2d');
     const cX = dim/2; const cY = dim/2;
     const pxToMm = (R_OUTER * 2) / dim; 
-        
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    // FONT ADJUSTMENT: Reduced to 40px (was 60px)
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.font = "bold 40px monospace"; 
 
     allStats.forEach((stat, i) => {
         const angle = i * angleStep - (Math.PI / 2);
         const textRadiusPx = ((R_LABEL_RING_START + R_OUTER) / 2) / pxToMm;
-        
         ctx.save();
         ctx.translate(cX + Math.cos(angle) * textRadiusPx, cY + Math.sin(angle) * textRadiusPx);
         ctx.rotate(angle + Math.PI/2); 
-        // Use Abbreviation for STL only
-        const label = abbrMap[stat] || stat.substring(0,3).toUpperCase();
-        ctx.fillText(label, 0, 0);
+        ctx.fillText(abbrMap[stat] || stat.substring(0,3).toUpperCase(), 0, 0);
         ctx.restore();
     });
 
     const imgData = ctx.getImageData(0,0,dim,dim).data;
     const voxelSize = pxToMm * 1.5; 
-        
     for(let y=0; y<dim; y+=1) {
         for(let x=0; x<dim; x+=1) {
-            const alpha = imgData[(y*dim + x)*4 + 3];
-            if(alpha > 150) {
-                const wx = -(x - cX) * pxToMm; 
+            if(imgData[(y*dim + x)*4 + 3] > 150) {
+                const wx = -(x - cX) * pxToMm; // Mirrored text logic
                 const wy = (y - cY) * pxToMm; 
-                cube(wx, wy, H_LABEL_RING, voxelSize, H_TEXT - H_LABEL_RING);
+                // Embed text slightly into ring (H_LABEL_RING - 0.2)
+                cube(wx, wy, H_LABEL_RING - 0.2, voxelSize, (H_TEXT - H_LABEL_RING) + 0.2);
             }
         }
     }
 
     stl += "endsolid StatCoin";
-
     const blob = new Blob([stl], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
