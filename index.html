@@ -3,116 +3,54 @@
 <head>
 <style>
   body { 
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    font-family: 'Segoe UI', sans-serif; 
     background: #fff; 
-    margin: 0;
     padding: 20px;
     display: flex;
     justify-content: center;
-    align-items: flex-start;
     gap: 40px;
     flex-wrap: wrap;
   }
-
-  /* Left Side: The Chart */
   .chart-container { 
-    position: relative; 
-    width: 600px; 
-    height: 600px; 
-    flex-shrink: 0;
-    /* Optional: Add a subtle border to frame the chart area */
-    border: 1px solid #f0f0f0; 
-    border-radius: 8px;
+    width: 500px; height: 500px; 
+    border: 1px solid #eee; border-radius: 8px; background: white;
   }
-  
   svg { width: 100%; height: 100%; overflow: visible; }
+  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 500px; }
+  .config-section { grid-column: span 2; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; margin-bottom: 10px; }
+  .control-group { border: 1px solid #eee; padding: 10px; border-radius: 8px; }
+  .group-title { font-weight: bold; margin-bottom: 8px; font-size: 14px; text-transform: uppercase; color: #555; }
+  .input-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px;}
+  input[type="number"] { width: 50px; text-align: center; border: 1px solid #ccc; border-radius: 4px; padding: 4px;}
+  .btn-row { grid-column: span 2; display: flex; gap: 10px; margin-top: 10px; }
+  button { flex: 1; padding: 12px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: bold; }
+  .btn-png { background-color: #555; }
+  .btn-stl { background-color: #d65c5c; } 
+  button:hover { opacity: 0.9; }
 
-  /* Right Side: The Inputs */
-  .controls {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    max-width: 500px;
-  }
-
-  .control-group {
-    border: 1px solid #eee;
-    padding: 10px;
-    border-radius: 8px;
-  }
-  
-  .group-title {
-    font-size: 14px;
-    font-weight: bold;
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    color: #555;
-  }
-
-  .input-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 5px;
-  }
-  
-  label { font-size: 14px; }
-  
-  input[type="number"] {
-    width: 50px;
-    padding: 4px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    text-align: center;
-  }
-
-  /* Download Button Styles */
-  .btn-container {
-    grid-column: span 2;
-    display: flex;
-    justify-content: center;
-    margin-top: 10px;
-  }
-
-  .btn-download {
-    background-color: #333;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    font-size: 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .btn-download:hover {
-    background-color: #555;
-  }
-
-  /* Color Themes for Inputs */
+  /* Colors */
   .theme-pink { background: #fff0f0; border-left: 4px solid #d65c5c; }
   .theme-orange { background: #fff5eb; border-left: 4px solid #e69c68; }
-  .theme-yellow { background: #ffffe0; border-left: 4px solid #cccc33; }
   .theme-green { background: #f0fff0; border-left: 4px solid #4caf50; }
-  .theme-blue { background: #f0f8ff; border-left: 4px solid #2196f3; }
   .theme-purple { background: #f8f0ff; border-left: 4px solid #9c27b0; }
+  .theme-blue { background: #f0f8ff; border-left: 4px solid #2196f3; }
+  .theme-yellow { background: #ffffe0; border-left: 4px solid #cccc33; }
 
+  .grid-line { fill: none; stroke: #e0e0e0; stroke-width: 1; }
+  .axis-line { stroke: #ccc; stroke-width: 1; stroke-dasharray: 4; }
+  .label-text { font-size: 12px; font-weight: bold; text-anchor: middle; alignment-baseline: middle; fill: #333; }
+  #data-polygon { fill: rgba(33, 150, 243, 0.4); stroke: #2196f3; stroke-width: 2; }
+  
+  /* Loading Overlay */
+  #loading { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); color:white; justify-content:center; align-items:center; z-index:999; font-size: 20px;}
 </style>
 </head>
 <body>
 
-<div class="chart-container" id="capture-area">
-  <svg viewBox="0 0 600 600" id="main-svg">
-    <style>
-      .grid-line { fill: none; stroke: #e0e0e0; stroke-width: 1; }
-      .axis-line { stroke: #ccc; stroke-width: 1; stroke-dasharray: 4; }
-      .label-text { font-family: 'Segoe UI', sans-serif; font-size: 12px; font-weight: bold; text-anchor: middle; alignment-baseline: middle; }
-      #data-polygon { fill: rgba(33, 150, 243, 0.4); stroke: #2196f3; stroke-width: 2; }
-    </style>
+<div id="loading">Generating 3D Geometry...</div>
 
+<div class="chart-container">
+  <svg viewBox="0 0 600 600" id="main-svg">
     <g id="grid"></g>
     <polygon id="data-polygon" points=""></polygon>
     <g id="labels"></g>
@@ -120,10 +58,20 @@
 </div>
 
 <div class="controls" id="input-container">
+  <div class="config-section">
+    <div class="group-title">3D Print Settings</div>
+    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+        <label>Diameter (mm):</label>
+        <input type="number" id="cfg-diameter" value="50.8" step="0.1">
+    </div>
+    <div style="font-size: 11px; color: #666;">
+       STL uses abbreviated labels (e.g. STR) to fit on the ring.
+    </div>
   </div>
+</div>
 
 <script>
-  // Configuration
+  // --- CONFIGURATION ---
   const groups = [
     { name: "Physical", class: "theme-pink", stats: ["Health", "Strength", "Stamina"] },
     { name: "Technical", class: "theme-orange", stats: ["Engineering", "Crafting", "Tech"] },
@@ -133,171 +81,264 @@
     { name: "Mental", class: "theme-yellow", stats: ["Intelligence", "Perception", "Creativity"] }
   ];
 
+  // Abbreviation Map (Only for STL)
+  const abbrMap = {
+    "Health": "HP", "Strength": "STR", "Stamina": "STA",
+    "Engineering": "ENG", "Crafting": "CRA", "Tech": "TEC",
+    "Humor": "HUM", "Passion": "PAS", "Empathy": "EMP",
+    "Spirituality": "SPI", "Discipline": "DIS", "Luck": "LUK",
+    "Charisma": "CHA", "Social Skills": "SOC", "Confidence": "CNF",
+    "Intelligence": "INT", "Perception": "PER", "Creativity": "CRE"
+  };
+
   let allStats = [];
   groups.forEach(g => g.stats.forEach(s => allStats.push(s)));
 
-  const svgGrid = document.getElementById('grid');
-  const svgLabels = document.getElementById('labels');
-  const dataPolygon = document.getElementById('data-polygon');
-  const inputContainer = document.getElementById('input-container');
-  
-  const centerX = 300;
-  const centerY = 300;
-  const radius = 200;
+  const centerX = 300, centerY = 300, radius = 200;
   const angleStep = (Math.PI * 2) / allStats.length;
   const userValues = {};
+  allStats.forEach(s => userValues[s] = 5);
 
-  // Initialize Data
-  allStats.forEach(stat => userValues[stat] = 5);
-
-  // --- 1. BUILD THE UI (Inputs) ---
+  // --- BUILD UI ---
+  const inputContainer = document.getElementById('input-container');
   groups.forEach(group => {
     const div = document.createElement('div');
     div.className = `control-group ${group.class}`;
-    const title = document.createElement('div');
-    title.className = 'group-title';
-    title.innerText = group.name;
-    div.appendChild(title);
-
+    div.innerHTML = `<div class="group-title">${group.name}</div>`;
     group.stats.forEach(stat => {
       const row = document.createElement('div');
       row.className = 'input-row';
-      const label = document.createElement('label');
-      label.innerText = stat;
-      const input = document.createElement('input');
-      input.type = 'number';
-      input.min = 0; 
-      input.max = 10;
-      input.value = 5;
-      input.dataset.stat = stat;
-      
-      input.addEventListener('input', (e) => {
-        let val = parseFloat(e.target.value);
-        if (isNaN(val)) val = 0;
-        if (val > 10) val = 10;
-        if (val < 0) val = 0;
-        userValues[stat] = val;
-        drawGraph();
-      });
-
-      row.appendChild(label);
-      row.appendChild(input);
+      row.innerHTML = `<label>${stat}</label><input class="stat-input" type="number" min="0" max="10" value="5" data-stat="${stat}">`;
       div.appendChild(row);
     });
     inputContainer.appendChild(div);
   });
 
-  // Add Download Button
-  const btnContainer = document.createElement('div');
-  btnContainer.className = 'btn-container';
-  const dlBtn = document.createElement('button');
-  dlBtn.className = 'btn-download';
-  dlBtn.innerHTML = '📷 Save Image';
-  dlBtn.onclick = downloadChart;
-  btnContainer.appendChild(dlBtn);
-  inputContainer.appendChild(btnContainer);
+  const btnRow = document.createElement('div');
+  btnRow.className = 'btn-row';
+  btnRow.innerHTML = `
+    <button class="btn-png" onclick="downloadImage()">📷 Save Image</button>
+    <button class="btn-stl" onclick="startSTL()">🧊 Download STL</button>
+  `;
+  inputContainer.appendChild(btnRow);
 
-  // --- 2. BUILD THE CHART ---
-  const levels = 5; 
-  for (let i = 1; i <= levels; i++) {
-    const currentRadius = (radius / levels) * i;
-    let points = "";
-    for (let j = 0; j < allStats.length; j++) {
-      const angle = j * angleStep - (Math.PI / 2);
-      const x = centerX + currentRadius * Math.cos(angle);
-      const y = centerY + currentRadius * Math.sin(angle);
-      points += `${x},${y} `;
-    }
-    const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-    poly.setAttribute("points", points);
-    poly.setAttribute("class", "grid-line");
-    svgGrid.appendChild(poly);
-  }
-
-  allStats.forEach((stat, index) => {
-    const angle = index * angleStep - (Math.PI / 2);
-    const lineX = centerX + radius * Math.cos(angle);
-    const lineY = centerY + radius * Math.sin(angle);
-    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    line.setAttribute("x1", centerX);
-    line.setAttribute("y1", centerY);
-    line.setAttribute("x2", lineX);
-    line.setAttribute("y2", lineY);
-    line.setAttribute("class", "axis-line");
-    svgGrid.appendChild(line);
-
-    const labelRadius = radius + 25; 
-    const labelX = centerX + labelRadius * Math.cos(angle);
-    const labelY = centerY + labelRadius * Math.sin(angle);
-    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    text.setAttribute("x", labelX);
-    text.setAttribute("y", labelY);
-    text.setAttribute("class", "label-text");
-    text.textContent = stat;
-    svgLabels.appendChild(text);
+  document.querySelectorAll('.stat-input').forEach(input => {
+    input.addEventListener('input', (e) => {
+      let val = parseFloat(e.target.value) || 0;
+      if (val > 10) val = 10; if (val < 0) val = 0;
+      userValues[e.target.dataset.stat] = val;
+      drawGraph();
+    });
   });
 
-  // --- 3. DRAW DATA ---
+  // --- DRAWING LOGIC (Screen Only) ---
+  const svgGrid = document.getElementById('grid');
+  const svgLabels = document.getElementById('labels');
+  const dataPolygon = document.getElementById('data-polygon');
+
+  function initChart() {
+    for (let i = 1; i <= 5; i++) {
+      const r = (radius / 5) * i;
+      let points = "";
+      for (let j = 0; j < allStats.length; j++) {
+        const a = j * angleStep - (Math.PI / 2);
+        points += `${centerX + r * Math.cos(a)},${centerY + r * Math.sin(a)} `;
+      }
+      const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+      poly.setAttribute("points", points);
+      poly.setAttribute("class", "grid-line");
+      svgGrid.appendChild(poly);
+    }
+    allStats.forEach((stat, i) => {
+      const a = i * angleStep - (Math.PI / 2);
+      const lx = centerX + (radius + 25) * Math.cos(a);
+      const ly = centerY + (radius + 25) * Math.sin(a);
+      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      text.setAttribute("x", lx); text.setAttribute("y", ly);
+      text.setAttribute("class", "label-text");
+      // Use FULL NAME for screen display
+      text.textContent = stat;
+      svgLabels.appendChild(text);
+      
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", centerX); line.setAttribute("y1", centerY);
+      line.setAttribute("x2", centerX + radius * Math.cos(a));
+      line.setAttribute("y2", centerY + radius * Math.sin(a));
+      line.setAttribute("class", "axis-line");
+      svgGrid.appendChild(line);
+    });
+  }
+
   function drawGraph() {
     let points = "";
-    allStats.forEach((stat, index) => {
+    allStats.forEach((stat, i) => {
       const val = userValues[stat];
-      const angle = index * angleStep - (Math.PI / 2);
+      const a = i * angleStep - (Math.PI / 2);
       const r = (val / 10) * radius;
-      const x = centerX + r * Math.cos(angle);
-      const y = centerY + r * Math.sin(angle);
-      points += `${x},${y} `;
+      points += `${centerX + r * Math.cos(a)},${centerY + r * Math.sin(a)} `;
     });
     dataPolygon.setAttribute("points", points);
   }
 
-  // --- 4. DOWNLOAD FUNCTION ---
-  function downloadChart() {
-    const svgElement = document.getElementById('main-svg');
+  initChart();
+  drawGraph();
+
+  function downloadImage() {
+    const svg = document.getElementById('main-svg');
     const serializer = new XMLSerializer();
-    let source = serializer.serializeToString(svgElement);
-
-    // Add XML namespaces
-    if(!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
-        source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
-    }
-    if(!source.match(/^<svg[^>]+xmlns:xlink="http\:\/\/www\.w3\.org\/1999\/xlink"/)){
-        source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
-    }
-
-    // Add XML declaration
+    let source = serializer.serializeToString(svg);
     source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
-
-    // Convert SVG source to URI data scheme.
     const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
-
-    // Create Image and Draw to Canvas
     const img = new Image();
-    img.onload = function() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 800; // High res
-        canvas.height = 800;
-        const context = canvas.getContext('2d');
-        
-        // Fill white background (otherwise it's transparent)
-        context.fillStyle = "#FFFFFF";
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw image
-        context.drawImage(img, 0, 0, 800, 800);
-        
-        // Download
-        const a = document.createElement('a');
-        a.download = "my-stat-chart.png";
-        a.href = canvas.toDataURL("image/png");
-        a.click();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 800; canvas.height = 800;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = "#FFF"; ctx.fillRect(0,0,800,800);
+      ctx.drawImage(img, 0,0,800,800);
+      const a = document.createElement('a');
+      a.download = "stat-chart.png";
+      a.href = canvas.toDataURL("image/png");
+      a.click();
     };
     img.src = url;
   }
 
-  // Initial Draw
-  drawGraph();
+  // --- STL GENERATOR ---
+  function startSTL() {
+    document.getElementById('loading').style.display = 'flex';
+    setTimeout(generateSTL, 50); 
+  }
 
+  function generateSTL() {
+    const diameterInput = parseFloat(document.getElementById('cfg-diameter').value) || 50.8;
+    
+    // Proportions
+    const R_OUTER = diameterInput / 2;
+    const R_LABEL_RING_START = R_OUTER * 0.72; 
+    const R_MAX_DATA = R_OUTER * 0.68;
+    
+    // Heights
+    const H_BASE = 2.0;
+    const H_LABEL_RING = 2.8; 
+    const H_TEXT = 3.6; 
+    const H_DATA = 4.0;
+    
+    let stl = "solid StatCoin\n";
+    
+    const vertex = (x, y, z) => `vertex ${x.toFixed(4)} ${y.toFixed(4)} ${z.toFixed(4)}\n`;
+    const triangle = (v1, v2, v3) => {
+      stl += `facet normal 0 0 0\nouter loop\n`;
+      stl += vertex(v1.x, v1.y, v1.z) + vertex(v2.x, v2.y, v2.z) + vertex(v3.x, v3.y, v3.z);
+      stl += `endloop\nendfacet\n`;
+    };
+    const quad = (bl, br, tr, tl) => {
+      triangle(bl, br, tr); triangle(bl, tr, tl);
+    };
+    const cube = (x, y, z, w, h) => {
+        // Top
+        quad({x:x,y:y,z:z+h}, {x:x+w,y:y,z:z+h}, {x:x+w,y:y+w,z:z+h}, {x:x,y:y+w,z:z+h});
+        // Sides
+        quad({x:x,y:y,z:z}, {x:x+w,y:y,z:z}, {x:x+w,y:y,z:z+h}, {x:x,y:y,z:z+h});
+        quad({x:x+w,y:y,z:z}, {x:x+w,y:y+w,z:z}, {x:x+w,y:y+w,z:z+h}, {x:x+w,y:y,z:z+h});
+        quad({x:x+w,y:y+w,z:z}, {x:x,y:y+w,z:z}, {x:x,y:y+w,z:z+h}, {x:x+w,y:y+w,z:z+h});
+        quad({x:x,y:y+w,z:z}, {x:x,y:y,z:z}, {x:x,y:y,z:z+h}, {x:x,y:y+w,z:z+h});
+    }
+
+    const segments = 60; 
+
+    // 1. Base Disc
+    for (let i = 0; i < segments; i++) {
+      const a1 = (i / segments) * Math.PI * 2;
+      const a2 = ((i + 1) / segments) * Math.PI * 2;
+      const p1 = { x: Math.cos(a1) * R_OUTER, y: Math.sin(a1) * R_OUTER };
+      const p2 = { x: Math.cos(a2) * R_OUTER, y: Math.sin(a2) * R_OUTER };
+      
+      triangle({x:0,y:0,z:0}, {x:p2.x,y:p2.y,z:0}, {x:p1.x,y:p1.y,z:0}); 
+      triangle({x:0,y:0,z:H_BASE}, {x:p1.x,y:p1.y,z:H_BASE}, {x:p2.x,y:p2.y,z:H_BASE});
+      quad({x:p1.x,y:p1.y,z:0}, {x:p2.x,y:p2.y,z:0}, {x:p2.x,y:p2.y,z:H_BASE}, {x:p1.x,y:p1.y,z:H_BASE});
+    }
+
+    // 2. Label Ring
+    for (let i = 0; i < segments; i++) {
+      const a1 = (i / segments) * Math.PI * 2;
+      const a2 = ((i + 1) / segments) * Math.PI * 2;
+      const i1 = { x: Math.cos(a1) * R_LABEL_RING_START, y: Math.sin(a1) * R_LABEL_RING_START };
+      const i2 = { x: Math.cos(a2) * R_LABEL_RING_START, y: Math.sin(a2) * R_LABEL_RING_START };
+      const o1 = { x: Math.cos(a1) * R_OUTER, y: Math.sin(a1) * R_OUTER };
+      const o2 = { x: Math.cos(a2) * R_OUTER, y: Math.sin(a2) * R_OUTER };
+
+      quad({x:i1.x, y:i1.y, z:H_LABEL_RING}, {x:o1.x, y:o1.y, z:H_LABEL_RING}, {x:o2.x, y:o2.y, z:H_LABEL_RING}, {x:i2.x, y:i2.y, z:H_LABEL_RING});
+      quad({x:i1.x, y:i1.y, z:H_BASE}, {x:i2.x, y:i2.y, z:H_BASE}, {x:i2.x, y:i2.y, z:H_LABEL_RING}, {x:i1.x, y:i1.y, z:H_LABEL_RING});
+      quad({x:o1.x, y:o1.y, z:H_BASE}, {x:o2.x, y:o2.y, z:H_BASE}, {x:o2.x, y:o2.y, z:H_LABEL_RING}, {x:o1.x, y:o1.y, z:H_LABEL_RING});
+    }
+
+    // 3. Stat Polygon
+    for (let i = 0; i < allStats.length; i++) {
+      const sC = allStats[i];
+      const sN = allStats[(i + 1) % allStats.length];
+      const r1 = (userValues[sC] / 10) * R_MAX_DATA;
+      const r2 = (userValues[sN] / 10) * R_MAX_DATA;
+      const a1 = i * angleStep - (Math.PI / 2);
+      const a2 = ((i + 1) % allStats.length) * angleStep - (Math.PI / 2);
+      const p1 = { x: Math.cos(a1) * r1, y: Math.sin(a1) * r1 };
+      const p2 = { x: Math.cos(a2) * r2, y: Math.sin(a2) * r2 };
+      
+      triangle({x:0,y:0,z:H_DATA}, {x:p1.x,y:p1.y,z:H_DATA}, {x:p2.x,y:p2.y,z:H_DATA});
+      quad({x:p1.x, y:p1.y, z:H_BASE}, {x:p2.x, y:p2.y, z:H_BASE}, {x:p2.x, y:p2.y, z:H_DATA}, {x:p1.x, y:p1.y, z:H_DATA});
+    }
+
+    // 4. PIXEL TEXT GENERATOR
+    const txtCanvas = document.createElement('canvas');
+    const dim = 600; 
+    txtCanvas.width = dim; txtCanvas.height = dim;
+    const ctx = txtCanvas.getContext('2d');
+    const cX = dim/2; const cY = dim/2;
+    const pxToMm = (R_OUTER * 2) / dim; 
+        
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    // FONT ADJUSTMENT: Reduced to 40px (was 60px)
+    ctx.font = "bold 40px monospace"; 
+
+    allStats.forEach((stat, i) => {
+        const angle = i * angleStep - (Math.PI / 2);
+        const textRadiusPx = ((R_LABEL_RING_START + R_OUTER) / 2) / pxToMm;
+        
+        ctx.save();
+        ctx.translate(cX + Math.cos(angle) * textRadiusPx, cY + Math.sin(angle) * textRadiusPx);
+        ctx.rotate(angle + Math.PI/2); 
+        // Use Abbreviation for STL only
+        const label = abbrMap[stat] || stat.substring(0,3).toUpperCase();
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+    });
+
+    const imgData = ctx.getImageData(0,0,dim,dim).data;
+    const voxelSize = pxToMm * 1.5; 
+        
+    for(let y=0; y<dim; y+=1) {
+        for(let x=0; x<dim; x+=1) {
+            const alpha = imgData[(y*dim + x)*4 + 3];
+            if(alpha > 150) {
+                const wx = -(x - cX) * pxToMm; 
+                const wy = (y - cY) * pxToMm; 
+                cube(wx, wy, H_LABEL_RING, voxelSize, H_TEXT - H_LABEL_RING);
+            }
+        }
+    }
+
+    stl += "endsolid StatCoin";
+
+    const blob = new Blob([stl], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `stat-medallion-${diameterInput}mm.stl`;
+    a.click();
+    URL.revokeObjectURL(url);
+    document.getElementById('loading').style.display = 'none';
+  }
 </script>
 
 </body>
