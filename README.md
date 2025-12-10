@@ -1,60 +1,62 @@
-# The Ultimate Stat Chart (RPG Style)
+# The Ultimate Stat Chart (Web + 3D Printable)
 
-A lightweight, interactive **Radar Chart (Spider Graph)** built to visualize personal stats, skills, or RPG attributes. This project uses pure HTML, CSS, and SVG to render a dynamic graph that updates in real-time as you input data.
+An interactive, browser-based tool that visualizes personal stats in an RPG-style radar chart. 
+
+Beyond just visualization, this tool features a built-in **Slicer/Mesh Generator** that can instantly compile your stats into a **3D Printable STL Medallion**, complete with raised data spikes and engraved text labels—all within a single HTML file.
 
 ![Project Status](https://img.shields.io/badge/status-active-brightgreen)
-![Tech](https://img.shields.io/badge/tech-HTML%20%7C%20CSS%20%7C%20JS-blue)
-
-## 📋 Overview
-
-This tool allows users to input values (0-10) across 6 distinct categories to generate a visual "stat polygon." It is designed with a flat, modern UI and is fully self-contained in a single file—no frameworks, libraries, or build steps required.
-
-**Live Demo:** [Insert your GitHub Pages Link Here]
+![Tech](https://img.shields.io/badge/tech-Vanilla%20JS%20%7C%20SVG%20%7C%20STL%20Generation-orange)
 
 ## ✨ Features
 
-* **Real-Time Visualization:** The SVG graph updates instantly as you type numbers.
-* **Custom Categories:** Replaces standard "Appearance" stats with a **"Technical"** category (Engineering, Crafting, Tech) to better suit makers and developers.
-* **Dynamic Scaling:** The graph axis scales automatically based on the input (0 to 10).
-* **Color-Coded Groups:** Visual distinction between Physical, Mental, Social, and Technical attributes.
-* **Zero Dependencies:** Built with Vanilla JavaScript and native SVG.
+### 🌐 Web Visualization
+* **Interactive Graph:** Real-time updates as you input stats (0-10).
+* **Custom Categories:** Tailored for Makers/Engineers:
+    * **Technical:** Engineering, Crafting, Tech
+    * **Physical:** Health, Strength, Stamina
+    * **Mental:** Intelligence, Perception, Creativity
+    * **Personality:** Humor, Passion, Empathy
+    * **Social:** Charisma, Social Skills, Confidence
+    * **Metaphysical:** Spirituality, Discipline, Luck
+* **PNG Export:** Download high-resolution images of your chart.
 
-## 📊 The Stat Categories
+### 🧊 3D Print Generator (STL)
+* **Browser-Based Slicing:** Generates binary STL files locally in your browser using pure JavaScript.
+* **Customizable Size:** Set your desired diameter (default 2 inches / 50.8mm).
+* **Voxel Text Engine:** Automatically converts stat names to abbreviations (e.g., `Strength` -> `STR`) and generates 3D pixel-art text on the medallion ring without needing external font files.
+* **Optimized Geometry:** Creates a flat base, a raised label ring, and data spikes designed for easy FDM printing.
 
-The chart tracks 18 distinct attributes across 6 main groups:
+## 🚀 How to Use
 
-1.  **Physical (Pink):** Health, Strength, Stamina
-2.  **Technical (Orange):** Engineering, Crafting, Tech
-3.  **Mental (Yellow):** Intelligence, Perception, Creativity
-4.  **Personality (Green):** Humor, Passion, Empathy
-5.  **Social (Blue):** Charisma, Social Skills, Confidence
-6.  **Metaphysical (Purple):** Spirituality, Discipline, Luck
+### Running the App
+1.  Clone the repo or download `index.html`.
+2.  Open the file in any modern web browser.
+3.  Enter your stats in the input fields.
 
-## 🚀 Quick Start
+### Generating a 3D Print
+1.  Set the **Diameter** (default is 50.8mm).
+2.  Click **"Download STL"**.
+3.  The browser will generate the 3D geometry (this may take 1-2 seconds) and download the file.
 
-### Option 1: Run Locally
-1.  Clone the repository:
-    ```bash
-    git clone [https://github.com/yourusername/stat-chart.git](https://github.com/yourusername/stat-chart.git)
-    ```
-2.  Open `index.html` in any web browser.
+## 🖨️ 3D Printing Guide
 
-### Option 2: Host on GitHub Pages
-1.  Go to your repository **Settings**.
-2.  Navigate to **Pages**.
-3.  Set the source branch to `main` (or `master`) and save.
-4.  Your chart will be live at `https://yourusername.github.io/stat-chart/`.
+The generated STL is optimized for simple filament swapping to make the text pop.
 
-## ⚙️ Customization
+* **Layer Height:** 0.2mm recommended.
+* **Infill:** 15-20%.
+* **Color Swapping (Filament Change):**
+    * **0mm - 3.6mm:** Base Color (The coin and label ring).
+    * **3.6mm - Top:** Accent Color (The data spikes and text).
+    * *Tip: Add an `M600` command or a "Pause at Height" in your slicer at **layer 18** (if using 0.2mm layers).*
 
-You can easily modify the categories by editing the `groups` array in the `<script>` section of `index.html`:
+## 🛠️ Tech Stack
 
-```javascript
-const groups = [
-  { 
-    name: "My Custom Category", 
-    class: "theme-red",
-    stats: ["Stat A", "Stat B", "Stat C"] 
-  },
-  // ...
-];
+* **HTML5/CSS3:** Flexbox layout and UI.
+* **SVG:** 2D Vector graph rendering.
+* **Vanilla JavaScript:** * Radial math for the polygon generation.
+    * Canvas pixel-scanning for voxel text generation.
+    * Raw binary STL mesh construction.
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE).
