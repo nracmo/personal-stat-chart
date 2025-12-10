@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    background: #fff; 
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+
+  /* Left Side: The Chart */
+  .chart-container { 
+    position: relative; 
+    width: 600px; 
+    height: 600px; 
+    flex-shrink: 0;
+  }
+  
+  svg { width: 100%; height: 100%; overflow: visible; }
+  .grid-line { fill: none; stroke: #e0e0e0; stroke-width: 1; }
+  .axis-line { stroke: #ccc; stroke-width: 1; stroke-dasharray: 4; }
+  .label-text { font-size: 12px; font-weight: bold; text-anchor: middle; alignment-baseline: middle; }
+  
+  /* The User's Data Shape */
+  #data-polygon {
+    fill: rgba(33, 150, 243, 0.4);
+    stroke: #2196f3;
+    stroke-width: 2;
+    transition: all 0.3s ease;
+  }
+
+  /* Right Side: The Inputs */
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    max-width: 500px;
+  }
+
+  .control-group {
+    border: 1px solid #eee;
+    padding: 10px;
+    border-radius: 8px;
+  }
+  
+  .group-title {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    color: #555;
+  }
+
+  .input-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+  }
+  
+  label { font-size: 14px; }
+  
+  input[type="number"] {
+    width: 50px;
+    padding: 4px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    text-align: center;
+  }
+
+  /* Color Themes */
+  .theme-pink { background: #fff0f0; border-left: 4px solid #d65c5c; }
+  .theme-orange { background: #fff5eb; border-left: 4px solid #e69c68; }
+  .theme-yellow { background: #ffffe0; border-left: 4px solid #cccc33; }
+  .theme-green { background: #f0fff0; border-left: 4px solid #4caf50; }
+  .theme-blue { background: #f0f8ff; border-left: 4px solid #2196f3; }
+  .theme-purple { background: #f8f0ff; border-left: 4px solid #9c27b0; }
+
+  /* Title */
+  h1 { width: 100%; text-align: center; margin-bottom: 30px; }
+
+</style>
+</head>
+<body>
+
+<div class="chart-container">
+  <svg viewBox="0 0 600 600">
+    <g id="grid"></g>
+    <polygon id="data-polygon" points=""></polygon>
+    <g id="labels"></g>
+  </svg>
+</div>
+
+<div class="controls" id="input-container">
+  </div>
+
+<script>
+  // Configuration
+  const groups = [
+    { 
+      name: "Physical", 
+      class: "theme-pink",
+      stats: ["Health", "Strength", "Stamina"] 
+    },
+    { 
+      name: "Technical",  // CHANGED FROM APPEARANCE
+      class: "theme-orange",
+      stats: ["Engineering", "Crafting", "Tech"] // NEW STATS
+    },
+    { 
+      name: "Personality", 
+      class: "theme-green",
+      stats: ["Humor", "Passion", "Empathy"] 
+    },
+    { 
+      name: "Metaphysical", 
+      class: "theme-purple",
+      stats: ["Spirituality", "Discipline", "Luck"] 
+    },
+    { 
+      name: "Social", 
+      class: "theme-blue",
+      stats: ["Charisma", "Social Skills", "Confidence"] 
+    },
+    { 
+      name: "Mental", 
+      class: "theme-yellow",
+      stats: ["Intelligence", "Perception", "Creativity"] 
+    }
+  ];
+
+  // Flatten for easy access
+  let allStats = [];
+  groups.forEach(g => {
+    g.stats.forEach(s => allStats.push(s));
+  });
+
+  const svgGrid = document.getElementById('grid');
+  const svgLabels = document.getElementById('labels');
+  const dataPolygon = document.getElementById('data-polygon');
+  const inputContainer = document.getElementById('input-container');
+  
+  const centerX = 300;
+  const centerY = 300;
+  const radius = 200;
+  const angleStep = (Math.PI * 2) / allStats.length;
+
+  // Initialize Data (Default to 5 for all)
+  const userValues = {};
+  allStats.forEach(stat => userValues[stat] = 5);
+
+  // --- 1. BUILD THE UI (Inputs) ---
+  groups.forEach(group => {
+    const div = document.createElement('div');
+    div.className = `control-group ${group.class}`;
+    
+    const title = document.createElement('div');
+    title.className = 'group-title';
+    title.innerText = group.name;
+    div.appendChild(title);
+
+    group.stats.forEach(stat => {
+      const row = document.createElement('div');
+      row.className = 'input-row';
+      
+      const label = document.createElement('label');
+      label.innerText = stat;
+      
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = 0;
+      input.max = 10;
+      input.value = 5; // Start at middle
+      input.dataset.stat = stat;
+      
+      // Update Graph on Input Change
+      input.addEventListener('input', (e) => {
+        let val = parseFloat(e.target.value);
+        if (isNaN(val)) val = 0;
+        if (val > 10) val = 10;
+        if (val < 0) val = 0;
+        userValues[stat] = val;
+        drawGraph();
+      });
+
+      row.appendChild(label);
+      row.appendChild(input);
+      div.appendChild(row);
+    });
+    
+    inputContainer.appendChild(div);
+  });
+
+  // --- 2. BUILD THE CHART (Grid & Labels) ---
+  const levels = 5; 
+  for (let i = 1; i <= levels; i++) {
+    const currentRadius = (radius / levels) * i;
+    let points = "";
+    for (let j = 0; j < allStats.length; j++) {
+      const angle = j * angleStep - (Math.PI / 2);
+      const x = centerX + currentRadius * Math.cos(angle);
+      const y = centerY + currentRadius * Math.sin(angle);
+      points += `${x},${y} `;
+    }
+    const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+    poly.setAttribute("points", points);
+    poly.setAttribute("class", "grid-line");
+    svgGrid.appendChild(poly);
+  }
+
+  allStats.forEach((stat, index) => {
+    const angle = index * angleStep - (Math.PI / 2);
+    
+    // Axis Line
+    const lineX = centerX + radius * Math.cos(angle);
+    const lineY = centerY + radius * Math.sin(angle);
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", centerX);
+    line.setAttribute("y1", centerY);
+    line.setAttribute("x2", lineX);
+    line.setAttribute("y2", lineY);
+    line.setAttribute("class", "axis-line");
+    svgGrid.appendChild(line);
+
+    // Label
+    const labelRadius = radius + 25; 
+    const labelX = centerX + labelRadius * Math.cos(angle);
+    const labelY = centerY + labelRadius * Math.sin(angle);
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.setAttribute("x", labelX);
+    text.setAttribute("y", labelY);
+    text.setAttribute("class", "label-text");
+    text.textContent = stat;
+    svgLabels.appendChild(text);
+  });
+
+  // --- 3. DRAW THE DATA POLYGON ---
+  function drawGraph() {
+    let points = "";
+    allStats.forEach((stat, index) => {
+      const val = userValues[stat];
+      const angle = index * angleStep - (Math.PI / 2);
+      // Map 0-10 to Radius
+      const r = (val / 10) * radius;
+      const x = centerX + r * Math.cos(angle);
+      const y = centerY + r * Math.sin(angle);
+      points += `${x},${y} `;
+    });
+    dataPolygon.setAttribute("points", points);
+  }
+
+  // Initial Draw
+  drawGraph();
+
+</script>
+
+</body>
+</html>
